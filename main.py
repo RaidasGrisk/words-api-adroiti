@@ -20,7 +20,7 @@ Issues:
 """
 
 from fastapi import FastAPI, HTTPException
-from utils import get_storage, is_anagram
+from utils import create_default_trie, get_anagrams, add_to_trie
 
 # python does not have a default median func
 from statistics import median
@@ -31,12 +31,15 @@ app = FastAPI()
 # if multiple nginx workers are spawned
 # a different copy is stored in each worker
 # will load (populate) this on each startup
-app.storage = []
+app.storage = {}
 
 
 @app.on_event('startup')
 def load_storage():
-    app.storage = get_storage()
+    filename = 'dictionary.txt'
+    with open(filename) as f:
+        words = f.read().splitlines()
+    app.storage = add_to_trie({}, words)
 
 
 @app.post('/words.json')
@@ -48,6 +51,9 @@ def add_words(words: dict) -> None:
 
 @app.delete('/words/{word}.json')
 def delete_word(word: str) -> None:
+
+    # simply remove the None: None escape
+    # this will not properly delete a word
     app.storage.remove(word)
 
 
@@ -62,15 +68,30 @@ def get_anagrams_of_a_word(
         limit: int | None = None,
         respect_proper_noun: bool = False
 ) -> dict:
-    anagrams = []
+
+    # make sure the proper noun param is accounted for
+    if not respect_proper_noun:
+        word = word.lower()
+
     count = 0
-    for storage_word in app.storage:
-        if is_anagram(storage_word, word, respect_proper_noun):
-            anagrams.append(storage_word)
-            count += 1
+    anagrams = []
+    char_counts = {char: word.count(char) for char in set(word)}
+    for word_ in get_anagrams(
+            char_counts=char_counts,
+            path=[],
+            root=app.storage,
+            word_length=len(word),
+            respect_proper_noun=respect_proper_noun
+    ):
+        # from the task description:
+        # Note that a word is not considered to be its own anagram.
+        if word_ != word:
+            anagrams.append(word_)
+
         # early exit if limit is specified
         if limit is not None and limit == count:
             return {'anagrams': anagrams}
+
     return {'anagrams': anagrams}
 
 

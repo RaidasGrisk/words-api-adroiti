@@ -1,41 +1,119 @@
+"""
+Source: # https://scipython.com/blog/finding-anagrams-with-a-trie/
 
-def get_storage(filename: str = 'dictionary.txt') -> list[str]:
+What is a trie?
+words = [Foo, Faa, Baz, Bar]
+trie = {
+    'F': {
+        'o': {
+            'o': {None: None}
+        },
+        'a': {
+            'a', {None: None}
+        }
+    },
+    'B': {
+        'a': {
+            'z': {None: None},
+            'r': {None: None}
+        }
+    }
+}
+"""
+
+
+def add_to_trie(trie, words):
+    # how the heck does this work?
+    # the output is clear, but having
+    # trouble understanding how does this work
+    for word in words:
+        this_dict = trie
+        for letter in word:
+            this_dict = this_dict.setdefault(letter, {})
+        this_dict[None] = None
+    return trie
+
+
+def create_default_trie(filename: str = 'dictionary.txt') -> dict:
     with open(filename) as f:
-        storage = f.read().splitlines()
-    return storage
+        words = f.read().splitlines()
+    return add_to_trie({}, words)
 
 
-def is_anagram(word1: str, word2: str, respect_proper_noun: bool = False) -> bool:
+# recursive function
+def get_anagrams(char_counts: dict, path: list, root: dict, word_length: int, respect_proper_noun: bool = False):
 
-    # if different length, already not an anagram
-    if len(word1) != len(word2):
-        return False
+    # None marks the end of a word, not including this
+    # would yield partial anagrams, i.e. word - words
+    if None in root and len(path) == word_length:
+        yield ''.join(path)
 
-    # proper nouns
-    # important: the placement of this check
-    # must be at this exact location, this will break
-    # it this part is moved elsewhere
+    # loop over each node, i.e
+    # root_ = {'A': {None: None}, 'a': {None: None, 'a': {None: None, 'l': {None: None, 'i': {'i': {None: None}}}}}}
+    # char | root_ :
+    # A | {None: None}
+    # a | {None: None, 'a': {None: None, 'l': {None: None, 'i': {'i': {None: None}}}}}
+    for char, root_ in root.items():
+
+        # make sure the proper noun param is accounted for
+        if char and not respect_proper_noun:
+            char = char.lower()
+
+        count = char_counts.get(char, 0)
+
+        # check if node char is in our word
+        # if not, move on with the next node
+        if count == 0:
+            continue
+
+        # if node char is in our word
+        # increment -1 and save the char to path
+        char_counts[char] = count - 1
+        path.append(char)
+
+        # here's the tricky part (!)
+        # pass the current root_ further deep into the recursion stack
+        # and see if it yields something.
+        for word_ in get_anagrams(char_counts, path, root_, word_length, respect_proper_noun):
+            yield word_
+
+        # this too is very tricky (!)
+        # clean up the stack after the yield
+        # so for this char, reset path and char_counts
+        # what happens if we get rid of this - nothing,
+        # except that memory use goes up?
+        path.pop()
+        char_counts[char] = count
+
+
+# test and debug if this works fine
+def debug_get_anagrams(word: str, limit: None | int = None, respect_proper_noun: bool = False) -> list[str]:
+
+    trie = create_default_trie()
+
+    # make sure the proper noun param is accounted for
     if not respect_proper_noun:
-        word1 = word1.lower()
-        word2 = word2.lower()
+        word = word.lower()
 
-    # from the task description:
-    # Note that a word is not considered to be its own anagram.
-    if word1 == word2:
-        return False
+    # get char dict
+    char_counts = {char: word.count(char) for char in set(word)}
 
-    # check if words has same letters
-    # many solutions here, could use:
-    # set, sort, loop over each char, trie (this would be fastest)
-    char_count = {}
+    count = 0
+    anagrams = []
+    for word_ in get_anagrams(
+            char_counts=char_counts,
+            path=[],
+            root=trie,
+            word_length=len(word),
+            respect_proper_noun=respect_proper_noun
+    ):
+        # from the task description:
+        # Note that a word is not considered to be its own anagram.
+        if word_ != word:
+            anagrams.append(word_)
 
-    for char1, char2 in zip(word1, word2):
-        char_count[char1] = char_count.get(char1, 0) + 1
-        char_count[char2] = char_count.get(char2, 0) - 1
+        # early exit if limit is specified
+        if limit is not None and limit == count:
+            return anagrams
 
-    for char in char_count:
-        if char_count[char] != 0:
-            return False
-
-    return True
-
+    return anagrams
