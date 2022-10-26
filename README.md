@@ -4,8 +4,8 @@
 `timeit.repeat(lambda: client.get("/anagrams/Read.json"), number=100)`
 
 Find anagrams by:
-  - simple dicts of chars: 0.3s
-  - trie: ?s
+  - simple dicts of chars: 3.67s
+  - trie: 0.026s (> x1000 speed increase)
 ---
 
 

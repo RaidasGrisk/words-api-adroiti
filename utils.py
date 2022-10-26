@@ -2,6 +2,8 @@
 Source: # https://scipython.com/blog/finding-anagrams-with-a-trie/
 
 What is a trie?
+https://drstearns.github.io/tutorials/trie/
+
 words = [Foo, Faa, Baz, Bar]
 trie = {
     'F': {
@@ -34,10 +36,11 @@ def add_to_trie(trie, words):
     return trie
 
 
+# this is not used anywhere, except for tests and debug
 def create_default_trie(filename: str = 'dictionary.txt') -> dict:
     with open(filename) as f:
         words = f.read().splitlines()
-    return add_to_trie({}, words)
+    return add_to_trie({}, words[:5])
 
 
 # recursive function
@@ -86,10 +89,37 @@ def get_anagrams(char_counts: dict, path: list, root: dict, word_length: int, re
         char_counts[char] = count
 
 
+def trie_to_list_of_words(root):
+    words = []
+    for char, root_ in root.items():
+        if root_ is None:
+            words.append('')
+        else:
+            for rest in trie_to_list_of_words(root_):
+                words.append(char + rest)
+    return words
+
+
+def trie_to_list_of_lengths(root):
+    length = 0
+    lengths = []
+    for char, root_ in root.items():
+        if root_ is None:
+            lengths.append(length)
+            length = 0
+        else:
+            for rest in trie_to_list_of_lengths(root_):
+                length += 1
+                lengths.append(length + rest)
+    return lengths
+
+
 # test and debug if this works fine
 def debug_get_anagrams(word: str, limit: None | int = None, respect_proper_noun: bool = False) -> list[str]:
 
     trie = create_default_trie()
+    lengths = trie_to_list_of_lengths(trie)
+    words = trie_to_list_of_words(trie)
 
     # make sure the proper noun param is accounted for
     if not respect_proper_noun:

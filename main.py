@@ -15,12 +15,12 @@ Optional tasks:
 
 Issues:
     - global storage not tied to proper db (how do you create / test one?)
-    - when adding words to the storage, do we check if it is already there?
+    - when adding words to the storage, do we check if it is already there? (does not apply for trie)
     - stats when storage is empty
 """
 
 from fastapi import FastAPI, HTTPException
-from utils import create_default_trie, get_anagrams, add_to_trie
+from utils import get_anagrams, add_to_trie, trie_to_list_of_words, trie_to_list_of_lengths
 
 # python does not have a default median func
 from statistics import median
@@ -46,7 +46,7 @@ def load_storage():
 def add_words(words: dict) -> None:
     # what if word is already in the storage?
     # will return multiple copies of the same word
-    app.storage = app.storage + words['words']
+    app.storage = add_to_trie(trie=app.storage, words=words['words'])
 
 
 @app.delete('/words/{word}.json')
@@ -59,7 +59,7 @@ def delete_word(word: str) -> None:
 
 @app.delete('/words.json')
 def delete_all_words() -> None:
-    app.storage = []
+    app.storage = {}
 
 
 @app.get('/anagrams/{word}.json')
@@ -76,17 +76,18 @@ def get_anagrams_of_a_word(
     count = 0
     anagrams = []
     char_counts = {char: word.count(char) for char in set(word)}
-    for word_ in get_anagrams(
-            char_counts=char_counts,
-            path=[],
-            root=app.storage,
-            word_length=len(word),
-            respect_proper_noun=respect_proper_noun
-    ):
-        # from the task description:
-        # Note that a word is not considered to be its own anagram.
+    args = {
+        'char_counts': char_counts,
+        'path': [],
+        'root': app.storage,
+        'word_length': len(word),
+        'respect_proper_noun': respect_proper_noun
+    }
+    for word_ in get_anagrams(**args):
+        # note: a word is not considered to be its own anagram
         if word_ != word:
             anagrams.append(word_)
+            count += 1
 
         # early exit if limit is specified
         if limit is not None and limit == count:
@@ -103,11 +104,7 @@ def get_anagrams_of_a_word(
 # Endpoint that returns a count of words in
 # the corpus and min/max/median/average word length
 def get_storage_stats() -> dict:
-
-    word_lengths = []
-    for word in app.storage:
-        word_lengths.append(len(word))
-
+    word_lengths = trie_to_list_of_lengths(app.storage)
     return {
         'count': len(word_lengths),
         'min': min(word_lengths),

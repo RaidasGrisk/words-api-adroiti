@@ -4,13 +4,6 @@ from utils import create_default_trie, get_anagrams
 import timeit
 
 client = TestClient(app)
-
-perf = timeit.repeat(lambda: client.get("/anagrams/Read.json"), number=100)
-print(f'{round(perf[0], 4)}s')
-
-
-# -------- #
-# test and debug if this works fine
 trie = create_default_trie()
 
 
