@@ -110,12 +110,11 @@ def trie_to_list_of_lengths(root: dict) -> list[int]:
     for char, root_ in root.items():
         if root_ is None:
             lengths.append(length)
-            length = 0
         else:
             length += 1
             for rest in trie_to_list_of_lengths(root_):
                 lengths.append(length + rest)
-            length = 0
+        length = 0
     return lengths
 
 
@@ -155,6 +154,7 @@ def is_word_in_trie(trie: dict, word: str) -> bool:
 def debug_and_test():
 
     trie = add_to_trie({}, ['Foo', 'Faa', 'Baza', 'Bar', 'Barr'])
+    trie = create_default_trie()
     lengths = trie_to_list_of_lengths(trie)
     words = trie_to_list_of_words(trie)
     delete_word_from_trie(trie, 'Bar')
