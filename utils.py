@@ -24,10 +24,7 @@ trie = {
 """
 
 
-def add_to_trie(trie, words):
-    # how the heck does this work?
-    # the output is clear, but having
-    # trouble understanding how does this work
+def add_to_trie(trie: dict, words: list[str]) -> dict:
     for word in words:
         this_dict = trie
         for letter in word:
@@ -36,15 +33,21 @@ def add_to_trie(trie, words):
     return trie
 
 
-# this is not used anywhere, except for tests and debug
+# used to debug /test only?
 def create_default_trie(filename: str = 'dictionary.txt') -> dict:
     with open(filename) as f:
         words = f.read().splitlines()
-    return add_to_trie({}, words[:5])
+    return add_to_trie({}, words)
 
 
-# recursive function
-def get_anagrams(char_counts: dict, path: list, root: dict, word_length: int, respect_proper_noun: bool = False):
+# recursively yield anagrams
+def get_anagrams(
+        char_counts: dict,
+        path: list,
+        root: dict,
+        word_length: int,
+        respect_proper_noun: bool = False
+) -> str:
 
     # None marks the end of a word, not including this
     # would yield partial anagrams, i.e. word - words
@@ -52,7 +55,6 @@ def get_anagrams(char_counts: dict, path: list, root: dict, word_length: int, re
         yield ''.join(path)
 
     # loop over each node, i.e
-    # root_ = {'A': {None: None}, 'a': {None: None, 'a': {None: None, 'l': {None: None, 'i': {'i': {None: None}}}}}}
     # char | root_ :
     # A | {None: None}
     # a | {None: None, 'a': {None: None, 'l': {None: None, 'i': {'i': {None: None}}}}}
@@ -89,7 +91,8 @@ def get_anagrams(char_counts: dict, path: list, root: dict, word_length: int, re
         char_counts[char] = count
 
 
-def trie_to_list_of_words(root):
+# used to debug only?
+def trie_to_list_of_words(root: dict) -> list[str]:
     words = []
     for char, root_ in root.items():
         if root_ is None:
@@ -100,7 +103,8 @@ def trie_to_list_of_words(root):
     return words
 
 
-def trie_to_list_of_lengths(root):
+# used fot stats only?
+def trie_to_list_of_lengths(root: dict) -> list[int]:
     length = 0
     lengths = []
     for char, root_ in root.items():
@@ -108,42 +112,51 @@ def trie_to_list_of_lengths(root):
             lengths.append(length)
             length = 0
         else:
+            length += 1
             for rest in trie_to_list_of_lengths(root_):
-                length += 1
                 lengths.append(length + rest)
+            length = 0
     return lengths
 
 
-# test and debug if this works fine
-def debug_get_anagrams(word: str, limit: None | int = None, respect_proper_noun: bool = False) -> list[str]:
+def delete_word_from_trie(trie: dict, word: str) -> None:
+    # https://stackoverflow.com/a/15709596/4233305
+    # this does not trim the trie only removes the end marker (!)
+    # proper implementation should include trie pruning
+    # also modifying the trie inplace (!)
+    root_ = trie
+    for char in word:
+        root_ = root_.get(char, None)
+        if root_ is None:
+            raise Exception('word not in trie')
+    # if this point is reached, we're at the end of
+    # the word in a trie. Remove the {None: None} marker.
+    if None in root_:
+        root_.pop(None)
 
-    trie = create_default_trie()
+
+# used to debug /test only?
+def is_word_in_trie(trie: dict, word: str) -> bool:
+    root_ = trie
+    for char in word:
+        root_ = root_.get(char, None)
+        if root_ is None:
+            return False
+    # end of the word
+    if None in root_:
+        return True
+    # this can only hit if word is
+    # deleted but trie is not pruned
+    else:
+        return False
+
+
+# just a helper to help figure things out manually
+def debug_and_test():
+
+    trie = add_to_trie({}, ['Foo', 'Faa', 'Baza', 'Bar', 'Barr'])
     lengths = trie_to_list_of_lengths(trie)
     words = trie_to_list_of_words(trie)
+    delete_word_from_trie(trie, 'Bar')
+    is_word_in_trie(trie, 'Bar')
 
-    # make sure the proper noun param is accounted for
-    if not respect_proper_noun:
-        word = word.lower()
-
-    # get char dict
-    char_counts = {char: word.count(char) for char in set(word)}
-
-    count = 0
-    anagrams = []
-    for word_ in get_anagrams(
-            char_counts=char_counts,
-            path=[],
-            root=trie,
-            word_length=len(word),
-            respect_proper_noun=respect_proper_noun
-    ):
-        # from the task description:
-        # Note that a word is not considered to be its own anagram.
-        if word_ != word:
-            anagrams.append(word_)
-
-        # early exit if limit is specified
-        if limit is not None and limit == count:
-            return anagrams
-
-    return anagrams
