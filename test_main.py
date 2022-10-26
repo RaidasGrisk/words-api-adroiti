@@ -10,7 +10,7 @@ def test_add_words():
     # populate the storage by adding all words
     storage = create_default_trie()
     response = client.post('/words.json', json={'words': storage})
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert len(client.app.storage) > 0  # == 53
 
 
@@ -20,18 +20,18 @@ def test_delete_word():
 
     # populate the storage with single word
     response = client.post('/words.json', json={'words': [word]})
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert is_word_in_trie(client.app.storage, word)
 
     # delete the word
     response = client.delete(f'/words/{word}.json')
-    assert response.status_code == 200
+    assert response.status_code == 204
     assert not is_word_in_trie(client.app.storage, word)
 
 
 def test_delete_all_words():
     response = client.delete('/words.json')
-    assert response.status_code == 200
+    assert response.status_code == 204
     assert len(client.app.storage) == 0
 
     # reset app.storage to default for other tests

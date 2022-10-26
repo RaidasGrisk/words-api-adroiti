@@ -44,18 +44,18 @@ def load_storage():
     app.storage = add_to_trie({}, words)
 
 
-@app.post('/words.json')
+@app.post('/words.json', status_code=201)
 def add_words(words: dict) -> None:
     app.storage = add_to_trie(trie=app.storage, words=words['words'])
 
 
-@app.delete('/words/{word}.json')
+@app.delete('/words/{word}.json', status_code=204)
 def delete_word(word: str) -> None:
     # this will not properly delete the word (!)
     delete_word_from_trie(app.storage, word)
 
 
-@app.delete('/words.json')
+@app.delete('/words.json', status_code=204)
 def delete_all_words() -> None:
     app.storage = {}
 
