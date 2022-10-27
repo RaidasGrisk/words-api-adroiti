@@ -2,13 +2,12 @@ from fastapi.testclient import TestClient
 from main import app
 from utils import create_default_trie, get_anagrams
 import timeit
-from typing import Union
 
 client = TestClient(app)
 trie = create_default_trie()
 
 
-def debug_get_anagrams(word: str, limit: Union[None, int] = None, respect_proper_noun: bool = False) -> list[str]:
+def debug_get_anagrams(word: str, limit: None | int = None, respect_proper_noun: bool = False) -> list[str]:
 
     # make sure the proper noun param is accounted for
     if not respect_proper_noun:
