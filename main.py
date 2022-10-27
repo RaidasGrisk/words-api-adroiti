@@ -40,7 +40,7 @@ app.storage = {}
 
 @app.on_event('startup')
 def load_storage():
-    filename = 'dictionary.txt'
+    filename = 'json/dictionary.json'
     with open(filename) as f:
         words = f.read().splitlines()
     app.storage = add_to_trie({}, words)

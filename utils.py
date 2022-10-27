@@ -34,7 +34,7 @@ def add_to_trie(trie: dict, words: list[str]) -> dict:
 
 
 # used to debug /test only?
-def create_default_trie(filename: str = 'dictionary.txt') -> dict:
+def create_default_trie(filename: str = 'json/dictionary.json') -> dict:
     with open(filename) as f:
         words = f.read().splitlines()
     return add_to_trie({}, words)
