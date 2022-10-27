@@ -22,6 +22,7 @@ Issues:
     - stats when storage is empty
 """
 
+from typing import Union
 from fastapi import FastAPI, HTTPException
 from utils import get_anagrams, add_to_trie, trie_to_list_of_words, trie_to_list_of_lengths, delete_word_from_trie
 
@@ -65,7 +66,7 @@ def delete_all_words() -> None:
 
 
 @app.get('/anagrams/{word}.json')
-def get_anagrams_of_a_word(word: str, limit: int | None = None, respect_proper_noun: bool = False) -> dict:
+def get_anagrams_of_a_word(word: str, limit: Union[int, None] = None, respect_proper_noun: bool = False) -> dict:
 
     # make sure the proper noun param is accounted for
     # do this here, or inside get_anagrams?
@@ -187,4 +188,3 @@ def delete_word_and_anagrams(word: str) -> None:
     words_to_delete_from_storage = [word] + anagrams
     for word_ in words_to_delete_from_storage:
         delete_word(word_)
-
