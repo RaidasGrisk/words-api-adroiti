@@ -45,6 +45,11 @@ def load_storage():
         words = f.read().splitlines()
     app.storage = add_to_trie({}, words)
 
+
+@app.get('/load_storage_manually.json')
+def load_storage_manually():
+    load_storage()
+
 # --------- #
 # main tasks
 
