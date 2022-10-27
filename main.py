@@ -10,15 +10,16 @@ Optional tasks:
     - Respect a query param for whether or not to include proper nouns in the list of anagrams
     - TODO: Endpoint that identifies words with the most anagrams
     - Endpoint that takes a set of words and returns whether or not they are all anagrams of each other
-    - TODO: Endpoint to return all anagram groups of size >= x
+    - Endpoint to return all anagram groups of size >= x
     - Endpoint to delete a word and all of its anagrams
 
 Issues:
+    - storage data structure: plain words in a list VS a trie.
+    - should implement a trie class and track word lengths (no need to traverse whole tree after adding a new word)
+    Not doing it so it is easy to debug and experiment
     - global storage not tied to proper db (how do you create / test one?)
     - when adding words to the storage, do we check if it is already there? (does not apply for trie)
     - stats when storage is empty
-    - should just implement a trie class and track word lengths (no need to traverse whole tree after adding a new word)
-    Not doing it so it is easy to debug run and experiment
 """
 
 from fastapi import FastAPI, HTTPException
@@ -43,6 +44,9 @@ def load_storage():
         words = f.read().splitlines()
     app.storage = add_to_trie({}, words)
 
+# --------- #
+# main tasks
+
 
 @app.post('/words.json', status_code=201)
 def add_words(words: dict) -> None:
@@ -52,7 +56,7 @@ def add_words(words: dict) -> None:
 @app.delete('/words/{word}.json', status_code=204)
 def delete_word(word: str) -> None:
     # this will not properly delete the word (!)
-    delete_word_from_trie(app.storage, word)
+    delete_word_from_trie(trie=app.storage, word=word)
 
 
 @app.delete('/words.json', status_code=204)
@@ -61,14 +65,17 @@ def delete_all_words() -> None:
 
 
 @app.get('/anagrams/{word}.json')
-def get_anagrams_of_a_word(word: str, limit: int | None = None, respect_proper_noun: bool = False
-) -> dict:
+def get_anagrams_of_a_word(word: str, limit: int | None = None, respect_proper_noun: bool = False) -> dict:
 
     # make sure the proper noun param is accounted for
     # do this here, or inside get_anagrams?
     if not respect_proper_noun:
         word = word.lower()
 
+    # lots of prep work (!), because get_anagrams is recursive,
+    # and we don't want to repeat all this inside recursive fn,
+    # better just do it all once before recursion, even though
+    # it looks like an overkill: i.e. passing char_counts and word_length
     count = 0
     anagrams = []
     char_counts = {char: word.count(char) for char in set(word)}
@@ -93,7 +100,7 @@ def get_anagrams_of_a_word(word: str, limit: int | None = None, respect_proper_n
 
 
 # --------- #
-# optional
+# optional tasks
 
 
 @app.get('/words/stats.json')
@@ -109,22 +116,22 @@ def get_storage_stats() -> dict:
 
 
 @app.get('/words/words_with_most_anagrams.json')
-def get_words_with_most_anagrams() -> dict:
+def get_anagram_groups_of_size(size: int) -> dict:
 
+    # hm, this works, rather fast...?
+    # there's def a way to do this much faster recursively
     words = trie_to_list_of_words(app.storage)
-    counts = {}
-    word_progress = 0
-    word_count = len(app.storage)
+    word_sets = {}
     for word in words:
-        anagrams = get_anagrams_of_a_word(word)['anagrams']
-        counts[word] = len(anagrams)
+        key = tuple(sorted(word))
+        word_sets[key] = word_sets.get(key, []) + [word]
 
-        # check progress
-        word_progress += 1
-        if word_progress % 50 == 0:
-            print(word_progress, 'out of', word_count)
+    # limit to size
+    # better sort or just loop over and del if len(key) < size ?
+    sorted_keys = sorted(word_sets, key=lambda k: len(word_sets[k]), reverse=True)
+    word_sets_ = [word_sets[key] for key in sorted_keys[:size]]
 
-    return dict(sorted(counts.items())[:10])
+    return {'groups': word_sets_}
 
 
 @app.post('/words/are_words_anagrams.json')
@@ -132,7 +139,7 @@ def are_words_anagrams(words: dict) -> bool:
 
     # so because all input has to be proper json
     # can not input just a list, has to be a dict
-    words = words['words']
+    words = words.get('words', [])
 
     # small edge case if a list is empty
     if not words:

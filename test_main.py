@@ -106,3 +106,7 @@ def test_delete_word_and_anagrams():
 
         response = client_.get(f'/anagrams/{word}.json')
         assert not response.json()['anagrams']
+
+
+def test_get_anagram_groups_of_size():
+    pass

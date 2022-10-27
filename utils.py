@@ -150,7 +150,7 @@ def is_word_in_trie(trie: dict, word: str) -> bool:
         return False
 
 
-# just a helper to help figure things out manually
+# helper to help figure things out manually
 def debug_and_test():
 
     trie = add_to_trie({}, ['Foo', 'Faa', 'Baza', 'Bar', 'Barr'])
@@ -159,4 +159,3 @@ def debug_and_test():
     words = trie_to_list_of_words(trie)
     delete_word_from_trie(trie, 'Bar')
     is_word_in_trie(trie, 'Bar')
-
