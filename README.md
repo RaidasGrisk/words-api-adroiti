@@ -1,11 +1,18 @@
 # Performance tracking
 
 ---
-`timeit.repeat(lambda: client.get("/anagrams/Read.json"), number=100)`
+Data structure speed vs memory:
+
+|  |  list[str] | trie  |
+|---|---|---|
+|  speed, s | 3.67 | 0.026 |
+|  memory, mb | 15 | 185 |
+speed: find anagrams of 'read' * 100
+memory: https://code.activestate.com/recipes/577504/
 
 Find anagrams by:
   - simple dicts of chars: 3.67s
-  - trie: ?s
+  - trie: 0.026s (> x1000 speed increase)
 ---
 
 
