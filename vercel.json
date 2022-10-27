@@ -6,9 +6,9 @@
 		{ "src": "/", "dest": "main.py" },
 		{ "src": "/docs", "dest": "main.py" },
 		{ "src": "/openapi.json", "dest": "main.py" },
-		{ "src": "/words", "dest": "app.py" },
-		{ "src": "/anagrams", "dest": "app.py" },
-		{ "src": "/words/(.*)", "dest": "app.py" },
-		{ "src": "/anagrams/(.*)", "dest": "app.py" }
+		{ "src": "/words", "dest": "main.py" },
+		{ "src": "/anagrams", "dest": "main.py" },
+		{ "src": "/words/(.*)", "dest": "main.py" },
+		{ "src": "/anagrams/(.*)", "dest": "main.py" }
 	]
 }
