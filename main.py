@@ -45,11 +45,6 @@ def load_storage():
         words = f.read().splitlines()
     app.storage = add_to_trie({}, words)
 
-
-@app.get('/')
-def greet_for_heroku() -> dict:
-    return {'Hi': '!'}
-
 # --------- #
 # main tasks
 
