@@ -3,12 +3,12 @@
 ---
 Data structure speed vs memory:
 
-|  |  list[str] | trie  |
-|---|---|---|
-|  speed, s | 3.67 | 0.026 |
-|  memory, mb | 15 | 185 |
+|  |  list[str] | trie  | better trie |
+|---|---|---|---|
+|  speed, s | 3.67 | 0.026 | 0.0001 |
+|  memory, mb | 15 | 185 | 207 |
 
-speed: find anagrams of 'read' * 100  
+speed: find anagrams of 'read' * 100
 memory: https://code.activestate.com/recipes/577504/
 
 ---

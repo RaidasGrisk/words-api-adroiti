@@ -8,22 +8,26 @@ Main tasks:
 Optional tasks:
     - get stats
     - Respect a query param for whether or not to include proper nouns in the list of anagrams
-    - TODO: Endpoint that identifies words with the most anagrams
+    - Endpoint that identifies words with the most anagrams
     - Endpoint that takes a set of words and returns whether or not they are all anagrams of each other
     - Endpoint to return all anagram groups of size >= x
     - Endpoint to delete a word and all of its anagrams
 
 Issues:
-    - storage data structure: plain words in a list VS a trie.
-    - should implement a trie class and track word lengths (no need to traverse whole tree after adding a new word)
-    Not doing it so it is easy to debug and experiment
+    - storage data structure: plain words in a list VS trie VS improved trie.
+    - the trie begs to be coded as a class. Not doing it so it is easy to debug and experiment.
     - global storage not tied to proper db (how do you create / test one?)
-    - when adding words to the storage, do we check if it is already there? (does not apply for trie)
     - stats when storage is empty
 """
 
 from fastapi import FastAPI, HTTPException
-from utils import get_anagrams, add_to_trie, trie_to_list_of_words, trie_to_list_of_lengths, delete_word_from_trie
+from utils import (
+    get_anagrams,
+    add_to_trie,
+    trie_to_list_of_lengths,
+    delete_word_from_trie,
+    groups_generator,
+)
 
 # python does not have a default median func
 from statistics import median
@@ -56,6 +60,7 @@ def add_words(words: dict) -> None:
 @app.delete('/words/{word}.json', status_code=204)
 def delete_word(word: str) -> None:
     # this will not properly delete the word (!)
+    # modifies the trie inplace
     delete_word_from_trie(trie=app.storage, word=word)
 
 
@@ -67,34 +72,22 @@ def delete_all_words() -> None:
 @app.get('/anagrams/{word}.json')
 def get_anagrams_of_a_word(word: str, limit: int | None = None, respect_proper_noun: bool = False) -> dict:
 
-    # make sure the proper noun param is accounted for
-    # do this here, or inside get_anagrams?
-    if not respect_proper_noun:
-        word = word.lower()
+    anagrams = get_anagrams(
+        word=word,
+        root=app.storage,
+    )
 
-    # lots of prep work (!), because get_anagrams is recursive,
-    # and we don't want to repeat all this inside recursive fn,
-    # better just do it all once before recursion, even though
-    # it looks like an overkill: i.e. passing char_counts and word_length
-    count = 0
-    anagrams = []
-    char_counts = {char: word.count(char) for char in set(word)}
-    args = {
-        'char_counts': char_counts,
-        'path': [],
-        'root': app.storage,
-        'word_length': len(word),
-        'respect_proper_noun': respect_proper_noun
-    }
-    for word_ in get_anagrams(**args):
-        # note: a word is not considered to be its own anagram
-        if word_ != word:
-            anagrams.append(word_)
-            count += 1
+    # note: a word is not considered to be its own anagram
+    if word in anagrams:
+        anagrams.remove(word)
 
-        # early exit if limit is specified
-        if limit is not None and limit == count:
-            return {'anagrams': anagrams}
+    if limit:
+        anagrams = anagrams[:limit]
+
+    # this is a quick fix that needs to be improved
+    # this assumes that only the first letter can be caps
+    if respect_proper_noun and anagrams and word[0].isupper():
+        anagrams = [word_ for word_ in anagrams if word[0] == word_[0]]
 
     return {'anagrams': anagrams}
 
@@ -116,22 +109,26 @@ def get_storage_stats() -> dict:
 
 
 @app.get('/words/words_with_most_anagrams.json')
+def get_largest_anagram_groups() -> dict:
+    anagrams = []
+    last_size = 0
+    for group in groups_generator(app.storage):
+        group_size = len(group)
+        if group_size > last_size:
+            anagrams = [list(group)]
+            last_size = group_size
+        if group_size == last_size:
+            anagrams.append(list(group))
+    return {'groups': anagrams}
+
+
+@app.get('/words/anagram_groups_of_size.json')
 def get_anagram_groups_of_size(size: int) -> dict:
-
-    # hm, this works, rather fast...?
-    # there's def a way to do this much faster recursively
-    words = trie_to_list_of_words(app.storage)
-    word_sets = {}
-    for word in words:
-        key = tuple(sorted(word))
-        word_sets[key] = word_sets.get(key, []) + [word]
-
-    # limit to size
-    # better sort or just loop over and del if len(key) < size ?
-    sorted_keys = sorted(word_sets, key=lambda k: len(word_sets[k]), reverse=True)
-    word_sets_ = [word_sets[key] for key in sorted_keys[:size]]
-
-    return {'groups': word_sets_}
+    anagrams = []
+    for group in groups_generator(app.storage):
+        if len(group) == size:
+            anagrams.append(list(group))
+    return {'groups': anagrams}
 
 
 @app.post('/words/are_words_anagrams.json')
@@ -162,19 +159,9 @@ def are_words_anagrams(words: dict) -> bool:
     # so let's just pick the first words and check if
     # it is an anagram of the rest
 
-    # could refactor this, because it pretty
-    # much repeats get_anagrams_of_a_word
     trie = add_to_trie({}, words)
     word = words[0]
-    char_counts = {char: word.count(char) for char in set(word)}
-    args = {
-        'char_counts': char_counts,
-        'path': [],
-        'root': trie,
-        'word_length': len(word),
-        'respect_proper_noun': False
-    }
-    anagrams = [word_ for word_ in get_anagrams(**args)]
+    anagrams = get_anagrams(word, root=trie)
     if len(anagrams) == len(words):
         return True
     else:
@@ -183,7 +170,7 @@ def are_words_anagrams(words: dict) -> bool:
 
 @app.delete('/words/delete_word_and_its_anagrams/{word}.json')
 def delete_word_and_anagrams(word: str) -> None:
-    anagrams = get_anagrams_of_a_word(word)['anagrams']
+    anagrams = get_anagrams_of_a_word(word=word)['anagrams']
     words_to_delete_from_storage = [word] + anagrams
     for word_ in words_to_delete_from_storage:
         delete_word(word_)

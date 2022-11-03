@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 from main import app
-from utils import create_default_trie, is_word_in_trie
+from utils import create_default_trie, is_word_in_trie, trie_to_list_of_words
 
 client = TestClient(app)
 
@@ -9,7 +9,8 @@ def test_add_words():
 
     # populate the storage by adding all words
     storage = create_default_trie()
-    response = client.post('/words.json', json={'words': storage})
+    words = trie_to_list_of_words(storage)
+    response = client.post('/words.json', json={'words': words})
     assert response.status_code == 201
     assert len(client.app.storage) > 0  # == 53
 
@@ -54,19 +55,17 @@ def test_get_anagrams_of_a_word():
 
         # testing a noun case
         word = 'Read'
-        _ = client_.post('/words.json', json={'words': ['deaR', 'daRe']})
+        anagrams_true = ['Raed', 'Rade']
+        _ = client_.post('/words.json', json={'words': anagrams_true})
         response = client_.get(f'/anagrams/{word}.json?respect_proper_noun=true')
-        anagrams_true = ['daRe', 'deaR']
         assert response.status_code == 200
         assert all(anagram in response.json()['anagrams'] for anagram in anagrams_true)
 
-        # testing a noun case
+        # testing limit
         word = 'read'
-        _ = client_.post('/words.json', json={'words': ['deaR', 'daRe']})
         response = client_.get(f'/anagrams/{word}.json?limit=2')
-        anagrams_true = ['ared', 'daer']
         assert response.status_code == 200
-        assert all(anagram in response.json()['anagrams'] for anagram in anagrams_true)
+        assert len(response.json()['anagrams']) == 2
 
 
 def test_get_storage_stats():
@@ -106,6 +105,10 @@ def test_delete_word_and_anagrams():
 
         response = client_.get(f'/anagrams/{word}.json')
         assert not response.json()['anagrams']
+
+
+def test_get_largest_anagram_groups():
+    pass
 
 
 def test_get_anagram_groups_of_size():
