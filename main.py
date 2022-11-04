@@ -116,7 +116,7 @@ def get_largest_anagram_groups() -> dict:
         if group_size > last_size:
             anagrams = [list(group)]
             last_size = group_size
-        if group_size == last_size:
+        elif group_size == last_size:
             anagrams.append(list(group))
     return {'groups': anagrams}
 
