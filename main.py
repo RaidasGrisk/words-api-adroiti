@@ -26,7 +26,7 @@ from utils import (
     add_to_trie,
     trie_to_list_of_lengths,
     delete_word_from_trie,
-    groups_generator,
+    anagram_groups_generator,
 )
 
 # python does not have a default median func
@@ -91,7 +91,6 @@ def get_anagrams_of_a_word(word: str, limit: int | None = None, respect_proper_n
 
     return {'anagrams': anagrams}
 
-
 # --------- #
 # optional tasks
 
@@ -112,7 +111,7 @@ def get_storage_stats() -> dict:
 def get_largest_anagram_groups() -> dict:
     anagrams = []
     last_size = 0
-    for group in groups_generator(app.storage):
+    for group in anagram_groups_generator(app.storage):
         group_size = len(group)
         if group_size > last_size:
             anagrams = [list(group)]
@@ -125,7 +124,7 @@ def get_largest_anagram_groups() -> dict:
 @app.get('/words/anagram_groups_of_size.json')
 def get_anagram_groups_of_size(size: int) -> dict:
     anagrams = []
-    for group in groups_generator(app.storage):
+    for group in anagram_groups_generator(app.storage):
         if len(group) == size:
             anagrams.append(list(group))
     return {'groups': anagrams}
@@ -158,7 +157,6 @@ def are_words_anagrams(words: dict) -> bool:
     # all words are anagrams of each other
     # so let's just pick the first words and check if
     # it is an anagram of the rest
-
     trie = add_to_trie({}, words)
     word = words[0]
     anagrams = get_anagrams(word, root=trie)

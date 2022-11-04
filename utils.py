@@ -10,12 +10,12 @@ https://www.cs.usfca.edu/~galles/visualization/Trie.html
 def add_to_trie(trie: dict, words: list[str]) -> dict:
     for word in words:
         word_sorted = tuple(sorted(word.lower()))
-        this_dict = trie
+        root = trie
         for letter in word_sorted:
-            this_dict = this_dict.setdefault(letter, {})
+            root = root.setdefault(letter, {})
         # set None to a set and add the word to it
         # does this inplace, so no assignment
-        this_dict.setdefault(None, set()).add(word)
+        root.setdefault(None, set()).add(word)
     return trie
 
 
@@ -36,8 +36,6 @@ def get_anagrams(word: str, root: dict) -> list[str]:
     for char in word_sorted:
         if char in root_:
             root_ = root_[char]
-        else:
-            return anagrams
 
     # by now, we are at the end of provided word
     # check if None in root_ and return
@@ -100,13 +98,23 @@ def is_word_in_trie(trie: dict, word: str) -> bool:
         return False
 
 
-def groups_generator(root: dict):
+def anagram_groups_generator(root: dict) -> set:
     for _, root_ in root.items():
         if isinstance(root_, dict):
-            for group in groups_generator(root_):
+            for group in anagram_groups_generator(root_):
                 yield group
     if None in root:
         yield root[None]
+
+
+def prune_trie(trie: dict) -> None:
+    # TODO: have to backtrack and delete child if it has no leafs
+    root = trie
+    for _, root_ in root.items():
+        if isinstance(root_, dict):
+            prune_trie(root_)
+        if None in root_ and not root_[None]:
+            del root_[None]
 
 
 # helper to help figure things out manually
@@ -120,4 +128,4 @@ def debug_and_test():
     delete_word_from_trie(trie, 'Bar')
     is_word_in_trie(trie, 'Bar')
 
-    [print(group) for group in groups_generator(trie)]
+    [print(group) for group in anagram_groups_generator(trie)]
